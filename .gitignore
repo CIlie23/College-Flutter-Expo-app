@@ -20,6 +20,7 @@ output-metadata.json
 # IntelliJ
 *.iml
 .idea/
+caches/
 misc.xml
 deploymentTargetDropDown.xml
 render.experimental.xml
