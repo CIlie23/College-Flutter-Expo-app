@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
-import { Platform, StyleSheet, Text, View, useWindowDimensions, useColorScheme } from 'react-native';
+import { Button, Platform, StyleSheet, Text, View, useWindowDimensions, useColorScheme } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useState } from 'react';
 
 type Building = {
   id: string;
@@ -25,14 +26,20 @@ console.log(`count is ${count}`);
 
 function DeviceInfo() {
     const { width, height } = useWindowDimensions();
-    const colorScheme = useColorScheme();
+    const systemColorScheme = useColorScheme();
     const insets = useSafeAreaInsets();
 
     const orientation = width >= height ? 'landscape' : 'portrait';
 
-    const isDark = colorScheme === 'dark';
+
+    const [theme, setTheme] = useState<'light' | 'dark'>(systemColorScheme === 'dark' ? 'dark' : 'light');
+    const isDark = theme === 'dark';
     const bgColor = isDark ? '#121212' : '#ffffff';
     const textColor = isDark ? '#ffffff' : '#000000';
+
+    const toggleTheme = () => {
+        setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
+    };
 
     return (
         <View style={[styles.container, { backgroundColor: bgColor }]}>
@@ -49,6 +56,12 @@ function DeviceInfo() {
           <Text style={{ color: textColor }}>
             why safe area matters: ignoring insets places fixed UI elements like a Save button under screen cutouts or the system gesture bar, making them unclickable.
           </Text>
+
+          <Button
+            title={`Change to ${ isDark ? 'Light' : 'Dark'} mode`}
+            onPress={toggleTheme}
+            color={isDark ? '#3b82f6' : '#1d4ed8'}
+          />
 
           <StatusBar style={isDark ? 'light' : 'dark'} />
         </View>
