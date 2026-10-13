@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View, useWindowDimensions, useColorScheme } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Building = {
   id: string;
@@ -22,27 +23,53 @@ console.log(describe({ ...b, floors: 4}));
 console.log(b.floors?.toFixed(1) ?? 'n/a');
 console.log(`count is ${count}`);
 
+function DeviceInfo() {
+    const { width, height } = useWindowDimensions();
+    const colorScheme = useColorScheme();
+    const insets = useSafeAreaInsets();
 
+    const orientation = width >= height ? 'landscape' : 'portrait';
+
+    const isDark = colorScheme === 'dark';
+    const bgColor = isDark ? '#121212' : '#ffffff';
+    const textColor = isDark ? '#ffffff' : '#000000';
+
+    return (
+        <View style={[styles.container, { backgroundColor: bgColor }]}>
+          <Text style={[styles.title, { color: textColor }]}>CARAP SI ILIE</Text>
+          <Text style={{ color: textColor }}>WASSUP FROM {Platform.OS}</Text>
+          <Text style={{ color: textColor }}>{describe(b)}</Text>
+          <Text style={{ color: textColor }}>{describe({ ...b, floors: 4})}</Text>
+
+          <Text style={{ color: textColor }}>orientation: {orientation}</Text>
+          <Text style={{ color: textColor }}>dark mode: {isDark ? 'yes' : 'no'}</Text>
+          <Text style={{ color: textColor }}>
+            safe area insets: top={insets.top}, bottom={insets.bottom}, left={insets.left}, right={insets.right}
+          </Text>
+          <Text style={{ color: textColor }}>
+            why safe area matters: ignoring insets places fixed UI elements like a Save button under screen cutouts or the system gesture bar, making them unclickable.
+          </Text>
+
+          <StatusBar style={isDark ? 'light' : 'dark'} />
+        </View>
+    );
+}
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>CARAP SI ILIE</Text>
-      <Text>WASSUP FROM {Platform.OS}</Text>
-      <Text>{describe(b)}</Text>
-      <Text>{describe({ ...b, floors: 4})}</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      <DeviceInfo />
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    padding: 16,
   },
   title: { fontSize: 28, fontWeight: '700' },
 });
