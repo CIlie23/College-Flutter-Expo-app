@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import MapView, { Marker, UrlTile } from 'react-native-maps';
 import { useEntrances } from '../store';
 import { statusColor, statusLabel } from '../theme';
+import { Pin } from './Pin';
 
 // OpenStreetMap's public tiles, weeks 2–4. Week 5 swaps this one constant for
 // the course's own Bucharest tiles.
@@ -16,6 +18,7 @@ const BUCHAREST = {
 
 export function EntranceMap() {
   const entrances = useEntrances();
+  const [selected, setSelected] = useState<string | null>(null);
   return (
     <>
       <MapView
@@ -34,9 +37,11 @@ export function EntranceMap() {
             }}
             title={`${e.street} ${e.number}, ${e.entranceName}`}
             description={statusLabel[e.surveyStatus]}
-            pinColor={statusColor[e.surveyStatus]}
+            onPress={() => setSelected(e.id)}
             onCalloutPress={() => router.push(`/entrances/${e.id}`)}
-          />
+          >
+            <Pin color={statusColor[e.surveyStatus]} selected={selected === e.id} />
+          </Marker>
         ))}
       </MapView>
       <Text style={styles.attribution}>© OpenStreetMap contributors</Text>

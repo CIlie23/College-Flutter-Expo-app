@@ -1,7 +1,9 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text } from 'react-native';
 import { useEntrances } from '../store';
-import { useColors } from '../theme';
+import { statusColor, useColors } from '../theme';
+import { Pin } from './Pin';
 import { StatusChip } from './StatusChip';
 
 // react-native-maps has no web implementation. Metro picks this file instead
@@ -9,6 +11,7 @@ import { StatusChip } from './StatusChip';
 export function EntranceMap() {
   const entrances = useEntrances();
   const colors = useColors();
+  const [selected, setSelected] = useState<string | null>(null);
   return (
     <FlatList
       data={entrances}
@@ -22,9 +25,13 @@ export function EntranceMap() {
       renderItem={({ item: e }) => (
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.push(`/entrances/${e.id}`)}
+          // first press selects (the pin grows), the second opens
+          onPress={() =>
+            selected === e.id ? router.push(`/entrances/${e.id}`) : setSelected(e.id)
+          }
           style={[styles.row, { borderColor: colors.border }]}
         >
+          <Pin color={statusColor[e.surveyStatus]} selected={selected === e.id} />
           <Text style={[styles.title, { color: colors.text }]}>
             {e.street} {e.number}, {e.entranceName}
           </Text>
@@ -48,5 +55,5 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
-  title: { flexShrink: 1, fontSize: 16 },
+  title: { flex: 1, fontSize: 16 },
 });

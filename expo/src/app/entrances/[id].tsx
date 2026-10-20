@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlyIn } from '../../components/FlyIn';
 import { StatusChip } from '../../components/StatusChip';
-import { buildings } from '../../contract/fixtures';
+import { ME, buildings, routes } from '../../contract/fixtures';
 import { useEntrance } from '../../store';
 import { useColors } from '../../theme';
 
@@ -16,6 +17,9 @@ export default function EntranceScreen() {
     return <Text style={{ color: colors.text, padding: 16 }}>No such entrance.</Text>;
   }
   const building = buildings.find((b) => b.id === entrance.buildingId);
+  const stops = routes.find((r) => r.workerId === ME)?.stops ?? [];
+  const here = stops.find((st) => st.entranceId === entrance.id);
+  const next = stops.find((st) => here && st.order === here.order + 1)?.entranceId;
   const rows: [string, number | boolean | string | null][] = [
     ['Pin confirmed', entrance.coordsConfirmed],
     ['Address checked', entrance.addressConfirmed],
@@ -37,7 +41,10 @@ export default function EntranceScreen() {
       <Text style={{ color: colors.muted }}>
         {entrance.entranceName} · {building?.label}
       </Text>
-      <StatusChip status={entrance.surveyStatus} />
+      {/* Exercise 3 — no shared elements in Expo Go: the chip flies in instead */}
+      <FlyIn>
+        <StatusChip status={entrance.surveyStatus} />
+      </FlyIn>
       <Text style={{ color: colors.muted }}>
         Office pin: {entrance.lat.toFixed(5)}, {entrance.lng.toFixed(5)}
       </Text>
@@ -62,6 +69,26 @@ export default function EntranceScreen() {
       >
         <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Survey</Text>
       </Pressable>
+      {next ? (
+        // Exercise 5 — push adds a screen (Back returns here); replace swaps
+        // this one out (Back skips it).
+        <View style={styles.nextRow}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push(`/entrances/${next}`)}
+            style={[styles.next, { borderColor: colors.border }]}
+          >
+            <Text style={{ color: colors.text }}>Next stop (push)</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.replace(`/entrances/${next}`)}
+            style={[styles.next, { borderColor: colors.border }]}
+          >
+            <Text style={{ color: colors.text }}>Next stop (replace)</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -72,6 +99,15 @@ const styles = StyleSheet.create({
   table: { alignSelf: 'stretch', borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   value: { flexShrink: 1, textAlign: 'right', fontWeight: '600' },
+  nextRow: { alignSelf: 'stretch', flexDirection: 'row', gap: 8 },
+  next: {
+    flex: 1,
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   button: {
     alignSelf: 'stretch',
     minHeight: 48,

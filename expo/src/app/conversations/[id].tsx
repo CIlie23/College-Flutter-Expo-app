@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { ME } from '../../contract/fixtures';
 import { messagesOf, nameOf } from '../../inbox';
@@ -25,7 +25,9 @@ export default function ConversationScreen() {
             ]}
           >
             {mine ? null : (
-              <Text style={[styles.author, { color: colors.muted }]}>{nameOf(m.authorId)}</Text>
+              <Link href={`/users/${m.authorId}`} style={[styles.author, { color: colors.muted }]}>
+                {nameOf(m.authorId)}
+              </Link>
             )}
             <Text style={{ color: mine ? colors.onPrimary : colors.text }}>{m.text}</Text>
           </View>

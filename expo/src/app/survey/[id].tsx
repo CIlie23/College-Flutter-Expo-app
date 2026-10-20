@@ -113,7 +113,6 @@ export default function SurveyScreen() {
             ['stories', 'Stories'],
             ['flats', 'Flats'],
             ['elevators', 'Elevators'],
-            ['yearBuilt', 'Year built'],
           ] as const
         ).map(([name, label]) => (
           <form.Field key={name} name={name}>
@@ -124,6 +123,21 @@ export default function SurveyScreen() {
             )}
           </form.Field>
         ))}
+        {/* Exercise 2 — a field's own validator runs next to the schema's. */}
+        <form.Field
+          name="yearBuilt"
+          validators={{
+            onChange: ({ value }) =>
+              value > new Date().getFullYear() ? 'Not in the future' : undefined,
+          }}
+        >
+          {(field) => (
+            <Labeled label="Year built" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
+              <TextInput style={input} keyboardType="number-pad" value={fromNumber(field.state.value)} onChangeText={(t) => field.handleChange(toNumber(t))} onBlur={field.handleBlur} />
+            </Labeled>
+          )}
+        </form.Field>
+        
         <form.Field name="groundFloorCommercial">
           {(field) => (
             <Row label="Shops on the ground floor" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
