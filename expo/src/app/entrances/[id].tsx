@@ -39,7 +39,21 @@ export default function EntranceScreen() {
         {entrance.street} {entrance.number}
       </Text>
       <Text style={{ color: colors.muted }}>
-        {entrance.entranceName} · {building?.label}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+          <Text style={{ color: colors.muted }}>{entrance.entranceName} · </Text>
+          {building ? (
+            <Pressable
+              accessibilityRole="link"
+              accessibilityHint="Opens the building screen"
+              onPress={() => router.push(`/buildings/${building.id}`)}
+              style={{ minHeight: 44, justifyContent: 'center' }}
+            >
+              <Text style={{ color: colors.primary, textDecorationLine: 'underline' }}>
+                {building.label}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       </Text>
       {/* Exercise 3 — no shared elements in Expo Go: the chip flies in instead */}
       <FlyIn>

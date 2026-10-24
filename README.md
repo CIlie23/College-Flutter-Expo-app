@@ -5,3 +5,6 @@ How to setup flutter project: [here](docs/flutter_project_setup_development_guid
 
 Multiple Caraps were harmed durring the setup of this repository and project.
 Many would be happy to hear these news
+
+FIREBASE PROJECT ID:
+college-expo-flutter

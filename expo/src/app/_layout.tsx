@@ -11,6 +11,7 @@ export default function RootLayout() {
         <Stack.Screen name="entrances/[id]" options={{ title: 'Entrance' }} />
         <Stack.Screen name="survey/[id]" options={{ title: 'Survey' }} />
         <Stack.Screen name="conversations/[id]" options={{ title: 'Messages' }} />
+        <Stack.Screen name="buildings/[id]" options={{ title: 'Building' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
