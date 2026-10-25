@@ -4,6 +4,13 @@ import { useEffect, useState } from 'react';
 import { Text, useColorScheme, View } from 'react-native';
 import { openDb } from '../db/db';
 
+function describeError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  return error.cause instanceof Error
+    ? `${error.message}: ${describeError(error.cause)}`
+    : error.message;
+}
+
 export default function RootLayout() {
   const scheme = useColorScheme();
   const [state, setState] = useState<'opening' | 'ready' | Error>('opening');
@@ -17,7 +24,7 @@ export default function RootLayout() {
   if (state instanceof Error) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
-        <Text>Could not open the database: {state.message}</Text>
+        <Text>Could not open the database: {describeError(state)}</Text>
       </View>
     );
   }
