@@ -17,7 +17,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "ro.rau.field_app"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -50,7 +51,8 @@
         {
           "locationWhenInUsePermission": "The field app tags your photos and new pins with where you stand."
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ]
   }
 }
