@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "ro.rau.college_app.college_app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
