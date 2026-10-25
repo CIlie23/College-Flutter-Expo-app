@@ -1,7 +1,11 @@
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
+import { useEffect } from 'react';
 import { type ColorValue, Text } from 'react-native';
 import { totalUnread } from '../../inbox';
+import { lastTab } from '../../session';
 import { useColors } from '../../theme';
+
+const TAB_PATHS = ['/', '/route', '/inbox'];
 
 const icon = (glyph: string) =>
   function TabIcon({ color }: { color: ColorValue }) {
@@ -10,6 +14,13 @@ const icon = (glyph: string) =>
 
 export default function TabsLayout() {
   const colors = useColors();
+  const pathname = usePathname();
+
+  // Remember the tab; the Map screen reopens it at the next launch.
+  useEffect(() => {
+    if (TAB_PATHS.includes(pathname)) lastTab.set(pathname);
+  }, [pathname]);
+
   return (
     <Tabs screenOptions={{ tabBarActiveTintColor: colors.primary }}>
       <Tabs.Screen
