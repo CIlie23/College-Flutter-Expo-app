@@ -36,11 +36,20 @@ function keep(uri: string, id: string): string {
   return file.uri;
 }
 
+/** EXIF's "2026:10:20 18:41:07" is the camera's local time: read it as this phone's. */
+function exifTime(shotAt: string | null): string | null {
+  const m = shotAt?.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+  if (!m) return null;
+  const [y, mo, d, h, mi, se] = m.slice(1).map(Number);
+  return new Date(y, mo - 1, d, h, mi, se).toISOString();
+}
+
 async function save(
   entranceId: string,
   asset: ImagePicker.ImagePickerAsset,
   where: { lat: number; lng: number } | null,
   heading: number | null,
+  takenAt: string,
 ) {
   const id = Crypto.randomUUID(); // the photo's id, born on the phone (UUID v4)
   const now = new Date().toISOString();
@@ -51,7 +60,7 @@ async function save(
     entranceId,
     fileName: `${id}.jpg`,
     remoteUrl: null,
-    takenAt: now,
+    takenAt,
     lat: where?.lat ?? null,
     lng: where?.lng ?? null,
     heading,
@@ -79,7 +88,21 @@ export async function takePhoto(entranceId: string): Promise<ExifSummary | null>
   const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], exif: true, quality: 1 });
   if (result.canceled) return null;
   const fix = await locate().catch(() => null); // no permission or no signal: null, as the contract allows
-  return save(entranceId, result.assets[0], fix, fix ? useField.getState().heading : null);
+  const takenAt = new Date().toISOString(); // the shutter has just fired
+  return save(entranceId, result.assets[0], fix, fix ? useField.getState().heading : null, takenAt);
+}
+
+/**
+ * The gallery: Android's photo picker needs no permission (the user picks,
+ * the app sees only that file). Where and which way it was taken we do not
+ * know — the phone was somewhere else then — so lat, lng and heading are null.
+ */
+export async function pickPhoto(entranceId: string): Promise<ExifSummary | null> {
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], exif: true, quality: 1 });
+  if (result.canceled) return null;
+  const asset = result.assets[0];
+  const takenAt = exifTime(readExif(asset.exif).shotAt) ?? new Date().toISOString();
+  return save(entranceId, asset, null, null, takenAt);
 }
 
 export function usePhotos(entranceId: string): PhotoRow[] {
