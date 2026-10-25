@@ -5,6 +5,7 @@ import { StatusChip } from '../../components/StatusChip';
 import { ME, buildings, routes } from '../../contract/fixtures';
 import { useEntrance } from '../../store';
 import { useColors } from '../../theme';
+import { HereCard } from '../../components/HereCard';
 
 const show = (v: number | boolean | string | null) =>
   v === null ? '—' : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : String(v);
@@ -84,6 +85,8 @@ export default function EntranceScreen() {
       >
         <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Survey</Text>
       </Pressable>
+      <HereCard />
+
       {next ? (
         // Exercise 5 — push adds a screen (Back returns here); replace swaps
         // this one out (Back skips it).
