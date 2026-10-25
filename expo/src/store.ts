@@ -5,6 +5,7 @@ import type { Building, Entrance, EntranceSurvey } from './contract/contract';
 import { ME } from './contract/fixtures';
 import { db } from './db/db';
 import { buildings, entrances } from './db/schema';
+import * as Crypto from 'expo-crypto';
 
 // ---------------------------------------------------------------------------
 // The data lives in SQLite. Screens read it with live queries: when a write
@@ -65,3 +66,43 @@ export const useField = create<FieldState>()((set) => ({
   setFix: (fix) => set({ fix }),
   setHeading: (heading) => set({ heading }),
 }));
+
+export async function addMissedEntrance(at: { lat: number; lng: number }): Promise<string> {
+  const now = new Date().toISOString();
+  const buildingId = Crypto.randomUUID();
+  const entranceId = Crypto.randomUUID();
+  await db.insert(buildings).values({
+    id: buildingId,
+    createdAt: now,
+    updatedAt: now,
+    label: 'New building',
+    comment: 'Added in the field: not on the office map.',
+    syncState: 'pending',
+  });
+  await db.insert(entrances).values({
+    id: entranceId,
+    createdAt: now,
+    updatedAt: now,
+    buildingId,
+    lat: at.lat,
+    lng: at.lng,
+    street: '?', // the survey asks for the real address
+    number: '?',
+    entranceName: 'Sc. 1',
+    coordsConfirmed: true, // the pin is where the worker stands: at the door
+    correctedLat: null,
+    correctedLng: null,
+    addressConfirmed: false,
+    stories: null,
+    flats: null,
+    elevators: null,
+    yearBuilt: null,
+    groundFloorCommercial: null,
+    comment: null,
+    surveyStatus: 'in_progress',
+    surveyedBy: null,
+    surveyedAt: null,
+    syncState: 'pending',
+  });
+  return entranceId;
+}
