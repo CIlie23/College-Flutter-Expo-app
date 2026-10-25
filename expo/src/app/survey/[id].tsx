@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { EntranceSurvey } from '../../contract/contract';
+import { EntranceSurvey, Entrance } from '../../contract/contract';
 import { submitSurvey, useEntrance } from '../../store';
 import { type Colors, useColors } from '../../theme';
 
@@ -45,13 +45,12 @@ export default function SurveyScreen() {
     },
     // The contract's own schema validates the whole form on every change.
     validators: { onChange: EntranceSurvey },
-    onSubmit: ({ value }) => {
-      submitSurvey(id, EntranceSurvey.parse(value));
+    // … defaultValues and validators unchanged …
+    onSubmit: async ({ value }) => {
+      await submitSurvey(id, EntranceSurvey.parse(value));
       router.back();
     },
   });
-
-  if (!entrance) return null;
 
   const input = [styles.input, { color: colors.text, borderColor: colors.border }];
 

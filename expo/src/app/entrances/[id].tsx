@@ -13,6 +13,7 @@ export default function EntranceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const entrance = useEntrance(id);
   const colors = useColors();
+  if (entrance === undefined) return null; // SQLite has not answered yet
   if (!entrance) {
     return <Text style={{ color: colors.text, padding: 16 }}>No such entrance.</Text>;
   }
