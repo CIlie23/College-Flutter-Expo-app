@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 // The field app's data contract, v1 (2026-10-13) — the Dart mirror of
 // contract.ts. The truth is README.md; test/contract_test.dart runs this file
 // over the same fixtures as test/contract.test.ts, so the two cannot drift.
