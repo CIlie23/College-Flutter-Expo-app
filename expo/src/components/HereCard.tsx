@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { compassPoint, locate, useHeading } from '../location';
-import { useField } from '../store';
+import { useField, fixQuality } from '../store';
 import { useColors } from '../theme';
 
 /** Where the phone is and which way it faces. */
@@ -9,6 +9,7 @@ export function HereCard() {
   const colors = useColors();
   const fix = useField((s) => s.fix);
   const heading = useField((s) => s.heading);
+  const quality = useField(fixQuality); // exercise 3
   const [busy, setBusy] = useState(false);
   useHeading(fix !== null); // a fix means the location permission is granted
   const button = [styles.button, { borderColor: colors.primary }];
@@ -27,6 +28,7 @@ export function HereCard() {
             ? 'Facing: no compass on the web'
             : 'Facing: waiting for the compass'
           : `Facing: ${Math.round(heading)}° ${compassPoint(heading)}`}
+          <Text style={{ color: colors.text }}>GPS: {quality}</Text>
       </Text>
       <View style={styles.row}>
         <Pressable

@@ -1,0 +1,1 @@
+ALTER TABLE `entrances` ADD `openedAt` text;

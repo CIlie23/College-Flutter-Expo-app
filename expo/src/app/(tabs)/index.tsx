@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EntranceMap } from '../../components/EntranceMap';
 import { locate } from '../../location';
 import { lastTab, useToken } from '../../session';
-import { addMissedEntrance, useEntrances } from '../../store';
+import { addMissedEntrance, useEntrances, useField } from '../../store';
 import { useColors } from '../../theme';
 
 // Read once per launch: the tab the app was closed on (the web keeps its URL instead).
@@ -20,6 +20,7 @@ export default function MapScreen() {
   const done = entrances.filter((e) => e.surveyStatus !== 'not_started').length;
   const [busy, setBusy] = useState(false);
   const network = useNetworkState();
+  const recent = useField((s) => s.recent); // exercise 5
   const token = useToken();
   // isInternetReachable is null until the phone has checked; then true or false.
   const online = network.isConnected !== false && network.isInternetReachable !== false;
@@ -56,6 +57,9 @@ export default function MapScreen() {
       >
         <Text style={{ color: colors.text, fontWeight: '600' }}>
           {entrances.length} entrances · {done} surveyed
+          <Text style={{ color: colors.muted, fontSize: 12 }}>
+            Recently opened: {recent.length === 0 ? 'none' : recent.map((id) => entrances.find((e) => e.id === id)?.entranceName ?? '?').join(', ')}
+          </Text>
         </Text>
         <View style={styles.chips}>
           <View style={[styles.chip, { backgroundColor: online ? '#16a34a' : '#6b7280' }]}>

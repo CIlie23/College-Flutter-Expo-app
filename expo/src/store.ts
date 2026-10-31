@@ -6,6 +6,7 @@ import { ME } from './contract/fixtures';
 import { db } from './db/db';
 import { buildings, entrances } from './db/schema';
 import * as Crypto from 'expo-crypto';
+export type EntranceRow = typeof entrances.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // The data lives in SQLite. Screens read it with live queries: when a write
@@ -17,12 +18,17 @@ export function useEntrances(): Entrance[] {
 }
 
 /** undefined while SQLite answers the first time, null when there is no such row. */
-export function useEntrance(id: string): Entrance | null | undefined {
+export function useEntrance(id: string): EntranceRow | null | undefined {
   const { data, updatedAt } = useLiveQuery(
     db.select().from(entrances).where(eq(entrances.id, id)),
     [id],
   );
   return updatedAt ? (data[0] ?? null) : undefined;
+}
+
+/** Exercise 1: the new column, written like any other. */
+export async function markOpened(id: string) {
+  await db.update(entrances).set({ openedAt: new Date().toISOString() }).where(eq(entrances.id, id));
 }
 
 export function useBuilding(id: string): Building | undefined {
@@ -56,15 +62,21 @@ export type Fix = { lat: number; lng: number; accuracy: number | null; at: strin
 type FieldState = {
   fix: Fix | null;
   heading: number | null;
+  recent: string[]; // exercise 5: the last five entrances opened, newest first
   setFix: (fix: Fix | null) => void;
   setHeading: (heading: number | null) => void;
+  openRecent: (id: string) => void;
 };
 
 export const useField = create<FieldState>()((set) => ({
   fix: null,
   heading: null,
+  recent: [],
   setFix: (fix) => set({ fix }),
   setHeading: (heading) => set({ heading }),
+  // Exercise 5: a NEW array every time. s.recent.push(id) would change the old
+  // array in place: same reference, so Zustand sees "no change" and nothing re-renders.
+  openRecent: (id) => set((s) => ({ recent: [id, ...s.recent.filter((x) => x !== id)].slice(0, 5) })),
 }));
 
 export async function addMissedEntrance(at: { lat: number; lng: number }): Promise<string> {
@@ -106,3 +118,10 @@ export async function addMissedEntrance(at: { lat: number; lng: number }): Promi
   });
   return entranceId;
 }
+
+/**
+ * Exercise 3 — a derived selector: a component that reads useField(fixQuality)
+ * re-renders when the quality changes, not on every new fix.
+ */
+export const fixQuality = (s: FieldState): 'none' | 'good' | 'rough' =>
+  s.fix === null ? 'none' : (s.fix.accuracy ?? Number.POSITIVE_INFINITY) <= 10 ? 'good' : 'rough';
