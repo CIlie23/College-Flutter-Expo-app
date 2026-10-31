@@ -9,6 +9,8 @@ import { type PhotoRow, photos } from './db/schema';
 import { locate } from './location';
 import { ensureCamera } from './permissions';
 import { useField } from './store';
+import { Photo } from './contract/contract';
+import { ME } from './contract/fixtures';
 
 /** What the photo file says about itself (EXIF), as far as we read it tonight. */
 export type ExifSummary = { camera: string | null; shotAt: string | null; gpsInExif: boolean };
@@ -50,10 +52,11 @@ async function save(
   where: { lat: number; lng: number } | null,
   heading: number | null,
   takenAt: string,
+  replacesPhotoId: string | null = null,
 ) {
-  const id = Crypto.randomUUID(); // the photo's id, born on the phone (UUID v4)
+  const id = Crypto.randomUUID();
   const now = new Date().toISOString();
-  const row: typeof photos.$inferInsert = {
+  const base: Omit<typeof photos.$inferInsert, 'localUri'> = {
     id,
     createdAt: now,
     updatedAt: now,
@@ -64,16 +67,18 @@ async function save(
     lat: where?.lat ?? null,
     lng: where?.lng ?? null,
     heading,
-    uploadState: 'pending', // week 5 uploads it
+    uploadState: 'pending',
     reviewStatus: 'pending',
     reviewNote: null,
     reviewedBy: null,
-    replacesPhotoId: null,
+    replacesPhotoId,
     syncState: 'pending',
     lastError: null,
-    localUri: keep(asset.uri, id),
   };
-  await db.insert(photos).values(row);
+  // The contract's rules run before the file is copied or the row written.
+  const check = Photo.safeParse(base);
+  if (!check.success) throw new Error(check.error.issues[0].message);
+  await db.insert(photos).values({ ...base, localUri: keep(asset.uri, id) });
   return readExif(asset.exif);
 }
 
@@ -83,13 +88,16 @@ async function save(
  * the EXIF, which the camera app may leave out, the user may strip, and the
  * photo picker removes.
  */
-export async function takePhoto(entranceId: string): Promise<ExifSummary | null> {
+export async function takePhoto(
+  entranceId: string,
+  replacesPhotoId: string | null = null,
+): Promise<ExifSummary | null> {
   if (!(await ensureCamera())) return null;
   const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], exif: true, quality: 1 });
   if (result.canceled) return null;
-  const fix = await locate().catch(() => null); // no permission or no signal: null, as the contract allows
-  const takenAt = new Date().toISOString(); // the shutter has just fired
-  return save(entranceId, result.assets[0], fix, fix ? useField.getState().heading : null, takenAt);
+  const fix = await locate().catch(() => null);
+  const takenAt = new Date().toISOString();
+  return save(entranceId, result.assets[0], fix, fix ? useField.getState().heading : null, takenAt, replacesPhotoId);
 }
 
 /**
@@ -108,4 +116,23 @@ export async function pickPhoto(entranceId: string): Promise<ExifSummary | null>
 export function usePhotos(entranceId: string): PhotoRow[] {
   return useLiveQuery(db.select().from(photos).where(eq(photos.entranceId, entranceId)), [entranceId])
     .data;
+}
+
+/** Debug stand-in for the office: mark a photo retake. Refused if the contract says no. */
+export async function markRetake(photoId: string, note: string) {
+  const [old] = await db.select().from(photos).where(eq(photos.id, photoId));
+  const updatedAt = new Date().toISOString();
+  const next = {
+    ...old,
+    reviewStatus: 'retake' as const,
+    reviewNote: note.trim() || null,
+    reviewedBy: ME, // rule P2: a reviewed photo names its reviewer
+    updatedAt,
+  };
+  const check = Photo.safeParse(next);
+  if (!check.success) throw new Error(check.error.issues[0].message);
+  await db
+    .update(photos)
+    .set({ reviewStatus: 'retake', reviewNote: next.reviewNote, reviewedBy: ME, updatedAt })
+    .where(eq(photos.id, photoId));
 }
