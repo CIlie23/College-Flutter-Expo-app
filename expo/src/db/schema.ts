@@ -48,6 +48,8 @@ export const entrances = sqliteTable('entrances', {
   surveyedBy: text(),
   surveyedAt: text(),
   ...local(),
+    /** Exercise 1 — local-only: when this phone last opened the entrance. */
+  openedAt: text(),
 });
 
 export const photos = sqliteTable('photos', {
