@@ -55,6 +55,7 @@ function SignedIn({ uid }: { uid: string }) {
             <Stack.Screen name="entrances/[id]" options={{ title: 'Entrance' }} />
             <Stack.Screen name="survey/[id]" options={{ title: 'Survey' }} />
             <Stack.Screen name="conversations/[id]" options={{ title: 'Messages' }} />
+            <Stack.Screen name="sync-status" options={{ title: 'Sync status' }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

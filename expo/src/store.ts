@@ -1,4 +1,4 @@
-import { eq, and, lt, notInArray, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, notInArray } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { create } from 'zustand';
 import type { Building, Entrance, EntranceSurvey } from './contract/contract';
@@ -197,4 +197,17 @@ export function useOutbox() {
     failed: data.filter((r) => r.syncState === 'failed').length,
     lastError: data.find((r) => r.lastError)?.lastError ?? null,
   };
+}
+
+/** The Sync status list: unsent surveys, newest first. Live, like useOutbox. */
+export function useOutboxRows() {
+  const { data, updatedAt } = useLiveQuery(
+    db
+      .select({ entrance: entrances, building: buildings.label })
+      .from(entrances)
+      .leftJoin(buildings, eq(entrances.buildingId, buildings.id))
+      .where(and(eq(entrances.surveyStatus, 'submitted'), inArray(entrances.syncState, ['pending', 'failed'])))
+      .orderBy(desc(entrances.surveyedAt)),
+  );
+  return { rows: data, ready: updatedAt !== undefined };
 }

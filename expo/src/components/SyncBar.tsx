@@ -6,9 +6,10 @@ import { auth } from '../firebase';
 import type { SurveyDoc } from '../repositories';
 import { useOutbox } from '../store';
 import { useColors } from '../theme';
-import { myPinsKey, pushSurveys } from '../sync';
 import { skipToken, useQuery } from '@tanstack/react-query';
 import type { Entrance } from '../contract/contract';
+import { router } from 'expo-router';
+import { myPinsKey, retryNow } from '../sync';   // replaces: import { myPinsKey, pushSurveys } from '../sync';
 
 /** The banner's sync line: what the cloud has, what waits to be sent. */
 export function SyncBar() {
@@ -48,10 +49,12 @@ export function SyncBar() {
         </Pressable>
       )}
       {seeded && <Text style={{ color: colors.muted, fontSize: 12 }}>{seeded}</Text>}
-      <Text style={{ color: colors.muted, fontSize: 12 }}>
-        {box.pending} to send · {box.failed} refused
-      </Text>
-      <Pressable accessibilityRole="button" onPress={() => pushSurveys(uid)}>
+      <Pressable accessibilityRole="link" onPress={() => router.push('/sync-status')}>
+        <Text style={[styles.link, { color: colors.primary }]}>
+          {box.pending} to send · {box.failed} refused ›
+        </Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={() => retryNow(uid)}>
         <Text style={[styles.link, { color: colors.primary }]}>Sync now</Text>
       </Pressable>
       {box.lastError && <Text style={styles.error}>last refusal: {box.lastError}</Text>}
