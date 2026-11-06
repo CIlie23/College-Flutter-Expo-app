@@ -4,8 +4,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, Switch, Text, TextInput, View, AppState } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { type Entrance, EntranceSurvey } from '../../contract/contract';
+import { auth } from '../../firebase';
 import { locate } from '../../location';
 import { submitSurvey, useEntrance } from '../../store';
+import { pushSurveys } from '../../sync';
 import { type Colors, useColors } from '../../theme';
 import Storage from 'expo-sqlite/kv-store';
 import { type ReactNode, useEffect, useMemo } from 'react';
@@ -55,6 +57,7 @@ function SurveyForm({ id, entrance }: { id: string; entrance: Entrance }) {
     validators: { onChange: EntranceSurvey },
     onSubmit: async ({ value }) => {
       await submitSurvey(id, EntranceSurvey.parse(value));
+      pushSurveys(auth.currentUser?.uid ?? ''); // and send it now, if the network is there
       Storage.removeItemSync(draftKey); // submitted: the draft is done
       // Saved: say it with the hand as well as the eyes (a no-op on the web).
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

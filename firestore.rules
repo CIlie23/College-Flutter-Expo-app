@@ -1,0 +1,43 @@
+rules_version = '2';
+
+// Who may read and write what. The apps never decide this: these rules do,
+// on Google's servers, for every request.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // pins/{entranceId}: the contract's entrance, plus assignedTo (a user's uid).
+    match /pins/{pinId} {
+      // Only the worker it is assigned to sees a pin. A query must ask for
+      // exactly that (where assignedTo == my uid), or the whole query is refused.
+      allow read: if signedIn() && resource.data.assignedTo == request.auth.uid;
+      // "Seed my pins": a new pin, assigned to yourself. Never to someone else.
+      allow create: if signedIn()
+        && request.resource.data.assignedTo == request.auth.uid
+        && request.resource.data.id == pinId;
+      // Reassigning is the office's job (tonight: the Firebase console),
+      // never a phone's.
+      allow update, delete: if false;
+    }
+
+    // surveys/{entranceId}: one survey per entrance, written by its author.
+    match /surveys/{entranceId} {
+      function pinIsMine() {
+        return get(/databases/$(database)/documents/pins/$(entranceId)).data.assignedTo
+          == request.auth.uid;
+      }
+      allow read: if signedIn() && resource.data.surveyedBy == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.surveyedBy == request.auth.uid
+        && pinIsMine();
+      allow update: if signedIn()
+        && resource.data.surveyedBy == request.auth.uid
+        && request.resource.data.surveyedBy == request.auth.uid
+        && pinIsMine();
+      allow delete: if false;
+    }
+  }
+}

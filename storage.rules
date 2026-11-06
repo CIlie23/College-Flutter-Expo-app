@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Cloud Storage: who may read and write which file. Same idea as
+// firestore.rules, for files instead of documents.
+service firebase.storage {
+  match /b/{bucket}/o {
+    // photos/{uid}/{entranceId}/{photoId}.jpg: a worker's own folder.
+    match /photos/{uid}/{rest=**} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
