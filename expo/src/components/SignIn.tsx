@@ -1,5 +1,5 @@
 import { FirebaseError } from 'firebase/app';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { auth } from '../firebase';
@@ -21,6 +21,15 @@ function messageFor(e: unknown): string {
       return 'The password needs at least 6 characters.';
     case 'auth/network-request-failed':
       return 'No connection: signing in needs the network.';
+    // Exercise 5: the rest of the codes a worker can meet.
+    case 'auth/missing-password':
+      return 'Type your password.';
+    case 'auth/missing-email':
+      return 'Type your email first.';
+    case 'auth/too-many-requests':
+      return 'Too many tries. Wait a few minutes, or reset your password.';
+    case 'auth/user-disabled':
+      return 'This account is switched off. Ask the office.';
     default:
       return `Could not sign in (${code || String(e)}).`;
   }
@@ -43,6 +52,18 @@ export function SignIn() {
       setError(messageFor(e));
     } finally {
       setBusy(false);
+    }
+  };
+
+  // Exercise 5: a reset link by email. Firebase answers the same whether or not
+  // the account exists (so nobody can probe emails), and so do we.
+  const reset = async () => {
+    setError(null);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setError('If an account exists for this email, a reset link is on its way.');
+    } catch (e) {
+      setError(messageFor(e));
     }
   };
 
@@ -91,6 +112,9 @@ export function SignIn() {
           </Pressable>
         </View>
       )}
+      <Pressable accessibilityRole="button" onPress={reset}>
+        <Text style={{ color: colors.primary }}>Forgot your password?</Text>
+      </Pressable>
     </View>
   );
 }
