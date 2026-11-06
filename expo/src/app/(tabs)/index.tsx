@@ -3,12 +3,15 @@ import { Redirect, router } from 'expo-router';
 import { useNetworkState } from 'expo-network';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { signOut } from 'firebase/auth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EntranceMap } from '../../components/EntranceMap';
+import { auth } from '../../firebase';
 import { locate } from '../../location';
-import { lastTab, useToken } from '../../session';
+import { lastTab } from '../../session';
 import { addMissedEntrance, useEntrances, useField } from '../../store';
 import { useColors } from '../../theme';
+import { SyncBar } from '../../components/SyncBar';
 
 // Read once per launch: the tab the app was closed on (the web keeps its URL instead).
 let reopen = Platform.OS === 'web' ? null : lastTab.get();
@@ -21,7 +24,6 @@ export default function MapScreen() {
   const [busy, setBusy] = useState(false);
   const network = useNetworkState();
   const recent = useField((s) => s.recent); // exercise 5
-  const token = useToken();
   // isInternetReachable is null until the phone has checked; then true or false.
   const online = network.isConnected !== false && network.isInternetReachable !== false;
 
@@ -67,10 +69,12 @@ export default function MapScreen() {
               {online ? `Online · ${network.type ?? '…'}` : 'Offline — saved on the phone'}
             </Text>
           </View>
-          <Text style={{ color: colors.muted, fontSize: 12 }}>
-            token {token ? `••••${token.slice(-4)}` : '…'}
-          </Text>
+          <Text style={{ color: colors.muted, fontSize: 12 }}>{auth.currentUser?.email}</Text>
+          <Pressable accessibilityRole="button" onPress={() => signOut(auth)}>
+            <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>Sign out</Text>
+          </Pressable>
         </View>
+        <SyncBar />
       </View>
       <Pressable
         accessibilityRole="button"

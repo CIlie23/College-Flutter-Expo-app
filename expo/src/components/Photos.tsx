@@ -84,6 +84,10 @@ export function Photos({ entranceId }: { entranceId: string }) {
               onPress={() => setOpenId(p.id)}
             >
               <Image source={{ uri: p.localUri }} style={styles.thumb} />
+              <Text style={{ color: colors.muted }}>
+                upload: {p.uploadState}
+                {p.lastError ? ` (${p.lastError})` : ''}
+              </Text>
               {needsRetake(p) ? (
                 <View style={[styles.badge, { backgroundColor: colors.error }]}>
                   <Text style={styles.badgeText}>Retake</Text>
