@@ -53,6 +53,9 @@ class Entrances extends Table with RowColumns, LocalColumns {
   TextColumn get surveyStatus => textEnum<SurveyStatus>()();
   TextColumn get surveyedBy => text().nullable()();
   TextColumn get surveyedAt => text().nullable()();
+
+  /// Exercise 1 — local-only: when this phone last opened the entrance.
+  TextColumn get openedAt => text().nullable()();
 }
 
 @DataClassName('PhotoRow')
@@ -80,22 +83,28 @@ class Photos extends Table with RowColumns, LocalColumns {
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(executor ??
-      // One file in the app's own sandbox (field.sqlite); on the web,
-      // SQLite compiled to WebAssembly in a worker (the two files in web/).
-      driftDatabase(
-        name: 'field',
-        web: DriftWebOptions(
-          sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-          driftWorker: Uri.parse('drift_worker.js'),
-        ),
-      ));
+            // One file in the app's own sandbox (field.sqlite); on the web,
+            // SQLite compiled to WebAssembly in a worker (the two files in web/).
+            driftDatabase(
+              name: 'field',
+              web: DriftWebOptions(
+                sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+                driftWorker: Uri.parse('drift_worker.js'),
+              ),
+            ));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2; // exercise 1: version 2 adds entrances.openedAt
 
   @override
   MigrationStrategy get migration =>
-      MigrationStrategy(onCreate: (m) => m.createAll());
+      MigrationStrategy(
+        onCreate: (m) => m.createAll(), // a new install gets every column at once
+        onUpgrade: (m, from, to) async {
+          // A phone that has version 1 gets the new column, keeping its rows.
+          if (from < 2) await m.addColumn(entrances, entrances.openedAt);
+        },
+      );
 
   /// First launch only: copy the office's fixtures into the empty tables.
   /// A contract object and a row share their field names, so JSON carries one
@@ -113,6 +122,7 @@ class AppDatabase extends _$AppDatabase {
       ]);
     });
   }
+
   // ---- Reads: streams that emit again whenever a table they read changes ----
 
   Stream<List<Entrance>> watchEntrances() => select(entrances)
@@ -129,23 +139,20 @@ class AppDatabase extends _$AppDatabase {
           .watchSingleOrNull()
           .map((r) => r == null ? null : Building.fromJson(r.toJson()));
 
+  Stream<List<PhotoRow>> watchPhotos(String entranceId) =>
+      (select(photos)..where((p) => p.entranceId.equals(entranceId))).watch();
+
+  /// Exercise 1: the new column, read like any other.
+  Stream<String?> watchOpenedAt(String id) =>
+      (select(entrances)..where((e) => e.id.equals(id))).watchSingleOrNull().map((r) => r?.openedAt);
+
   // ---- Writes ----
 
-  /// The survey goes to SQLite: it survives a restart and waits for week 4's push.
-  Future<void> submitSurvey(Entrance surveyed, String me) {
-    final now = DateTime.now().toUtc().toIso8601String();
-    final row = surveyed.copyWith(
-      surveyStatus: SurveyStatus.submitted,
-      surveyedBy: me,
-      surveyedAt: now,
-      updatedAt: now,
-    );
-    return into(entrances).insertOnConflictUpdate(EntranceRow.fromJson({
-      ...row.toJson(),
-      'syncState': 'pending', // the office has not seen this version yet
-      'lastError': null,
-    }));
-  }
+  Future<void> markOpened(String id) =>
+      (update(entrances)..where((e) => e.id.equals(id))).write(
+        EntrancesCompanion(openedAt: Value(DateTime.now().toUtc().toIso8601String())),
+      );
+
   /// A building the office missed: the worker stands at its door and makes
   /// both rows on the phone, with ids born here (UUID v4). The office learns of
   /// it at the first sync (week 4); until then it is 'pending', like any new row.
@@ -175,5 +182,21 @@ class AppDatabase extends _$AppDatabase {
       ));
     });
     return entranceId;
+  }
+
+  /// The survey goes to SQLite: it survives a restart and waits for week 4's push.
+  Future<void> submitSurvey(Entrance surveyed, String me) {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final row = surveyed.copyWith(
+      surveyStatus: SurveyStatus.submitted,
+      surveyedBy: me,
+      surveyedAt: now,
+      updatedAt: now,
+    );
+    return into(entrances).insertOnConflictUpdate(EntranceRow.fromJson({
+      ...row.toJson(),
+      'syncState': 'pending', // the office has not seen this version yet
+      'lastError': null,
+    }));
   }
 }
