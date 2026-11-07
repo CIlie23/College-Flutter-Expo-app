@@ -739,6 +739,17 @@ class $EntrancesTable extends Entrances
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _openedAtMeta = const VerificationMeta(
+    'openedAt',
+  );
+  @override
+  late final GeneratedColumn<String> openedAt = GeneratedColumn<String>(
+    'opened_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -765,6 +776,7 @@ class $EntrancesTable extends Entrances
     surveyStatus,
     surveyedBy,
     surveyedAt,
+    openedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -947,6 +959,12 @@ class $EntrancesTable extends Entrances
         surveyedAt.isAcceptableOrUnknown(data['surveyed_at']!, _surveyedAtMeta),
       );
     }
+    if (data.containsKey('opened_at')) {
+      context.handle(
+        _openedAtMeta,
+        openedAt.isAcceptableOrUnknown(data['opened_at']!, _openedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -1056,6 +1074,10 @@ class $EntrancesTable extends Entrances
         DriftSqlType.string,
         data['${effectivePrefix}surveyed_at'],
       ),
+      openedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}opened_at'],
+      ),
     );
   }
 
@@ -1097,6 +1119,9 @@ class EntranceRow extends DataClass implements Insertable<EntranceRow> {
   final SurveyStatus surveyStatus;
   final String? surveyedBy;
   final String? surveyedAt;
+
+  /// Exercise 1 — local-only: when this phone last opened the entrance.
+  final String? openedAt;
   const EntranceRow({
     required this.id,
     required this.createdAt,
@@ -1122,6 +1147,7 @@ class EntranceRow extends DataClass implements Insertable<EntranceRow> {
     required this.surveyStatus,
     this.surveyedBy,
     this.surveyedAt,
+    this.openedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1180,6 +1206,9 @@ class EntranceRow extends DataClass implements Insertable<EntranceRow> {
     if (!nullToAbsent || surveyedAt != null) {
       map['surveyed_at'] = Variable<String>(surveyedAt);
     }
+    if (!nullToAbsent || openedAt != null) {
+      map['opened_at'] = Variable<String>(openedAt);
+    }
     return map;
   }
 
@@ -1231,6 +1260,9 @@ class EntranceRow extends DataClass implements Insertable<EntranceRow> {
       surveyedAt: surveyedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(surveyedAt),
+      openedAt: openedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(openedAt),
     );
   }
 
@@ -1270,6 +1302,7 @@ class EntranceRow extends DataClass implements Insertable<EntranceRow> {
       ),
       surveyedBy: serializer.fromJson<String?>(json['surveyedBy']),
       surveyedAt: serializer.fromJson<String?>(json['surveyedAt']),
+      openedAt: serializer.fromJson<String?>(json['openedAt']),
     );
   }
   @override
@@ -1304,6 +1337,7 @@ class EntranceRow extends DataClass implements Insertable<EntranceRow> {
       ),
       'surveyedBy': serializer.toJson<String?>(surveyedBy),
       'surveyedAt': serializer.toJson<String?>(surveyedAt),
+      'openedAt': serializer.toJson<String?>(openedAt),
     };
   }
 
@@ -1332,6 +1366,7 @@ class EntranceRow extends DataClass implements Insertable<EntranceRow> {
     SurveyStatus? surveyStatus,
     Value<String?> surveyedBy = const Value.absent(),
     Value<String?> surveyedAt = const Value.absent(),
+    Value<String?> openedAt = const Value.absent(),
   }) => EntranceRow(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
@@ -1359,6 +1394,7 @@ class EntranceRow extends DataClass implements Insertable<EntranceRow> {
     surveyStatus: surveyStatus ?? this.surveyStatus,
     surveyedBy: surveyedBy.present ? surveyedBy.value : this.surveyedBy,
     surveyedAt: surveyedAt.present ? surveyedAt.value : this.surveyedAt,
+    openedAt: openedAt.present ? openedAt.value : this.openedAt,
   );
   EntranceRow copyWithCompanion(EntrancesCompanion data) {
     return EntranceRow(
@@ -1406,6 +1442,7 @@ class EntranceRow extends DataClass implements Insertable<EntranceRow> {
       surveyedAt: data.surveyedAt.present
           ? data.surveyedAt.value
           : this.surveyedAt,
+      openedAt: data.openedAt.present ? data.openedAt.value : this.openedAt,
     );
   }
 
@@ -1435,7 +1472,8 @@ class EntranceRow extends DataClass implements Insertable<EntranceRow> {
           ..write('comment: $comment, ')
           ..write('surveyStatus: $surveyStatus, ')
           ..write('surveyedBy: $surveyedBy, ')
-          ..write('surveyedAt: $surveyedAt')
+          ..write('surveyedAt: $surveyedAt, ')
+          ..write('openedAt: $openedAt')
           ..write(')'))
         .toString();
   }
@@ -1466,6 +1504,7 @@ class EntranceRow extends DataClass implements Insertable<EntranceRow> {
     surveyStatus,
     surveyedBy,
     surveyedAt,
+    openedAt,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -1494,7 +1533,8 @@ class EntranceRow extends DataClass implements Insertable<EntranceRow> {
           other.comment == this.comment &&
           other.surveyStatus == this.surveyStatus &&
           other.surveyedBy == this.surveyedBy &&
-          other.surveyedAt == this.surveyedAt);
+          other.surveyedAt == this.surveyedAt &&
+          other.openedAt == this.openedAt);
 }
 
 class EntrancesCompanion extends UpdateCompanion<EntranceRow> {
@@ -1522,6 +1562,7 @@ class EntrancesCompanion extends UpdateCompanion<EntranceRow> {
   final Value<SurveyStatus> surveyStatus;
   final Value<String?> surveyedBy;
   final Value<String?> surveyedAt;
+  final Value<String?> openedAt;
   final Value<int> rowid;
   const EntrancesCompanion({
     this.id = const Value.absent(),
@@ -1548,6 +1589,7 @@ class EntrancesCompanion extends UpdateCompanion<EntranceRow> {
     this.surveyStatus = const Value.absent(),
     this.surveyedBy = const Value.absent(),
     this.surveyedAt = const Value.absent(),
+    this.openedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   EntrancesCompanion.insert({
@@ -1575,6 +1617,7 @@ class EntrancesCompanion extends UpdateCompanion<EntranceRow> {
     required SurveyStatus surveyStatus,
     this.surveyedBy = const Value.absent(),
     this.surveyedAt = const Value.absent(),
+    this.openedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        createdAt = Value(createdAt),
@@ -1613,6 +1656,7 @@ class EntrancesCompanion extends UpdateCompanion<EntranceRow> {
     Expression<String>? surveyStatus,
     Expression<String>? surveyedBy,
     Expression<String>? surveyedAt,
+    Expression<String>? openedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1641,6 +1685,7 @@ class EntrancesCompanion extends UpdateCompanion<EntranceRow> {
       if (surveyStatus != null) 'survey_status': surveyStatus,
       if (surveyedBy != null) 'surveyed_by': surveyedBy,
       if (surveyedAt != null) 'surveyed_at': surveyedAt,
+      if (openedAt != null) 'opened_at': openedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1670,6 +1715,7 @@ class EntrancesCompanion extends UpdateCompanion<EntranceRow> {
     Value<SurveyStatus>? surveyStatus,
     Value<String?>? surveyedBy,
     Value<String?>? surveyedAt,
+    Value<String?>? openedAt,
     Value<int>? rowid,
   }) {
     return EntrancesCompanion(
@@ -1698,6 +1744,7 @@ class EntrancesCompanion extends UpdateCompanion<EntranceRow> {
       surveyStatus: surveyStatus ?? this.surveyStatus,
       surveyedBy: surveyedBy ?? this.surveyedBy,
       surveyedAt: surveyedAt ?? this.surveyedAt,
+      openedAt: openedAt ?? this.openedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1783,6 +1830,9 @@ class EntrancesCompanion extends UpdateCompanion<EntranceRow> {
     if (surveyedAt.present) {
       map['surveyed_at'] = Variable<String>(surveyedAt.value);
     }
+    if (openedAt.present) {
+      map['opened_at'] = Variable<String>(openedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1816,6 +1866,7 @@ class EntrancesCompanion extends UpdateCompanion<EntranceRow> {
           ..write('surveyStatus: $surveyStatus, ')
           ..write('surveyedBy: $surveyedBy, ')
           ..write('surveyedAt: $surveyedAt, ')
+          ..write('openedAt: $openedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3165,11 +3216,10 @@ class $$BuildingsTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (entrancesRefs)
-                    await $_getPrefetchedDataByColumns<
+                    await $_getPrefetchedData<
                       BuildingRow,
                       $BuildingsTable,
-                      EntranceRow,
-                      $EntrancesTable
+                      EntranceRow
                     >(
                       currentTable: table,
                       referencedTable: $$BuildingsTableReferences
@@ -3180,8 +3230,8 @@ class $$BuildingsTableTableManager
                             table,
                             p0,
                           ).entrancesRefs,
-                      currentColumn: 'id',
-                      referencedColumn: 'building_id',
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.buildingId == item.id),
                       typedResults: items,
                     ),
                 ];
@@ -3231,6 +3281,7 @@ typedef $$EntrancesTableCreateCompanionBuilder = EntrancesCompanion Function({
   required SurveyStatus surveyStatus,
   Value<String?> surveyedBy,
   Value<String?> surveyedAt,
+  Value<String?> openedAt,
   Value<int> rowid,
 });
 typedef $$EntrancesTableUpdateCompanionBuilder = EntrancesCompanion Function({
@@ -3258,6 +3309,7 @@ typedef $$EntrancesTableUpdateCompanionBuilder = EntrancesCompanion Function({
   Value<SurveyStatus> surveyStatus,
   Value<String?> surveyedBy,
   Value<String?> surveyedAt,
+  Value<String?> openedAt,
   Value<int> rowid,
 });
 
@@ -3425,6 +3477,11 @@ class $$EntrancesTableFilterComposer
 
   ColumnFilters<String> get surveyedAt => $composableBuilder(
     column: $table.surveyedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get openedAt => $composableBuilder(
+    column: $table.openedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3601,6 +3658,11 @@ class $$EntrancesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get openedAt => $composableBuilder(
+    column: $table.openedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$BuildingsTableOrderingComposer get buildingId {
     final $$BuildingsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -3722,6 +3784,9 @@ class $$EntrancesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get openedAt =>
+      $composableBuilder(column: $table.openedAt, builder: (column) => column);
+
   $$BuildingsTableAnnotationComposer get buildingId {
     final $$BuildingsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -3823,6 +3888,7 @@ class $$EntrancesTableTableManager
                 Value<SurveyStatus> surveyStatus = const Value.absent(),
                 Value<String?> surveyedBy = const Value.absent(),
                 Value<String?> surveyedAt = const Value.absent(),
+                Value<String?> openedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EntrancesCompanion(
                 id: id,
@@ -3849,6 +3915,7 @@ class $$EntrancesTableTableManager
                 surveyStatus: surveyStatus,
                 surveyedBy: surveyedBy,
                 surveyedAt: surveyedAt,
+                openedAt: openedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3877,6 +3944,7 @@ class $$EntrancesTableTableManager
                 required SurveyStatus surveyStatus,
                 Value<String?> surveyedBy = const Value.absent(),
                 Value<String?> surveyedAt = const Value.absent(),
+                Value<String?> openedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EntrancesCompanion.insert(
                 id: id,
@@ -3903,6 +3971,7 @@ class $$EntrancesTableTableManager
                 surveyStatus: surveyStatus,
                 surveyedBy: surveyedBy,
                 surveyedAt: surveyedAt,
+                openedAt: openedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -3950,19 +4019,18 @@ class $$EntrancesTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (photosRefs)
-                    await $_getPrefetchedDataByColumns<
+                    await $_getPrefetchedData<
                       EntranceRow,
                       $EntrancesTable,
-                      PhotoRow,
-                      $PhotosTable
+                      PhotoRow
                     >(
                       currentTable: table,
                       referencedTable: $$EntrancesTableReferences
                           ._photosRefsTable(db),
                       managerFromTypedResult: (p0) =>
                           $$EntrancesTableReferences(db, table, p0).photosRefs,
-                      currentColumn: 'id',
-                      referencedColumn: 'entrance_id',
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.entranceId == item.id),
                       typedResults: items,
                     ),
                 ];

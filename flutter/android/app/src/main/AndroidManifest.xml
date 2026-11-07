@@ -1,10 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Week 3: the tiles and (week 4) the server; the position for the photo and
-<<<<<<< Updated upstream
-     the missed-building pin. No CAMERA: the system camera app takes the photo. -->
-=======
          the missed-building pin. No CAMERA: the system camera app takes the photo. -->
->>>>>>> Stashed changes
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />

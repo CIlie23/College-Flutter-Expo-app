@@ -32,7 +32,7 @@ Future<void> _offer(BuildContext context, String title, Future<bool> Function() 
         title: Text(title),
         content: const Text(
             'The field app tags your photos and new pins with where you stand. '
-                'You can turn it on in Settings → Permissions.'),
+            'You can turn it on in Settings → Permissions.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Not now')),
           TextButton(

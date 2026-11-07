@@ -5,12 +5,8 @@ plugins {
 }
 
 android {
-<<<<<<< Updated upstream
-    namespace = "ro.rau.college_app.college_app"
-=======
     namespace = "ro.rau.field_app"
     // permission_handler 13 (step 3) compiles against Android 17, API level 37.
->>>>>>> Stashed changes
     compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
