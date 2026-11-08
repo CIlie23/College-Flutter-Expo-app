@@ -13,6 +13,12 @@ String messageFor(Object e) {
       'This email already has an account: sign in instead.',
     'weak-password' => 'The password needs at least 6 characters.',
     'network-request-failed' => 'No connection: signing in needs the network.',
+    'missing-password' => 'Type your password.',
+    'missing-email' => 'Type your email first.',
+    'channel-error' => 'Type your email and your password.',
+    'too-many-requests' =>
+      'Too many tries. Wait a few minutes, or reset your password.',
+    'user-disabled' => 'This account is switched off. Ask the office.',
     _ => 'Could not sign in (${code.isEmpty ? e : code}).',
   };
 }
@@ -55,6 +61,21 @@ class _SignInScreenState extends State<SignInScreen> {
       setState(() => _error = messageFor(e));
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _reset() async {
+    setState(() => _error = null);
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: _email.text.trim(),
+      );
+      setState(
+        () => _error =
+            'If an account exists for this email, a reset link is on its way.',
+      );
+    } catch (e) {
+      setState(() => _error = messageFor(e));
     }
   }
 
@@ -116,6 +137,10 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ],
               ),
+            TextButton(
+              onPressed: _reset,
+              child: const Text('Forgot your password?'),
+            ),
           ],
         ),
       ),

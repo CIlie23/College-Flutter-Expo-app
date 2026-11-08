@@ -12,9 +12,20 @@ abstract class PinsRepository {
   Future<({int created, int refused})> seed(String uid, List<Entrance> pins);
 }
 
+/// What the cloud holds for one survey.
+enum CloudState { none, denied, pending, sent }
+
+typedef CloudSurvey = ({CloudState state, String? updatedAt});
+
 abstract class SurveysRepository {
   /// Idempotent: sending the same survey twice leaves one document.
   Future<void> push(Map<String, Object?> survey);
+
+  /// Follow one survey document live.
+  Stream<CloudSurvey> watchOne(String id);
+
+  /// The newest survey sent by this user, live.
+  Stream<Map<String, dynamic>?> watchLastSent(String uid);
 }
 
 /// The surveyed fields of an entrance (the contract's survey form).

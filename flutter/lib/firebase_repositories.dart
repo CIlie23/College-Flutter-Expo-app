@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'contract/contract.dart';
@@ -23,26 +25,62 @@ class FirebasePinsRepository implements PinsRepository {
     String uid,
     List<Entrance> pins,
   ) async {
-    // One write per pin: a pin someone else already has is refused by the
-    // rules (it would be an update), and the others still go through.
-    var created = 0;
-    await Future.wait([
-      for (final p in pins)
-        _pins
-            .doc(p.id)
-            .set({...p.toJson(), 'assignedTo': uid})
-            .then((_) => created++, onError: (Object _) {}),
-    ]);
-    return (created: created, refused: pins.length - created);
+    // A batch is all or nothing: if the rules refuse one pin, none is written.
+    final batch = FirebaseFirestore.instance.batch();
+    for (final p in pins) {
+      batch.set(_pins.doc(p.id), {...p.toJson(), 'assignedTo': uid});
+    }
+    try {
+      await batch.commit();
+      return (created: pins.length, refused: 0);
+    } on FirebaseException {
+      return (created: 0, refused: pins.length);
+    }
   }
 }
 
 class FirebaseSurveysRepository implements SurveysRepository {
+  final _surveys = FirebaseFirestore.instance.collection('surveys');
+
   @override
   Future<void> push(Map<String, Object?> survey) =>
       // The document id is the survey's UUID: a second push overwrites it.
-      FirebaseFirestore.instance
-          .collection('surveys')
-          .doc(survey['id']! as String)
-          .set(survey);
+      _surveys.doc(survey['id']! as String).set(survey);
+
+  @override
+  Stream<CloudSurvey> watchOne(String id) => _surveys
+      .doc(id)
+      .snapshots(includeMetadataChanges: true)
+      .map<CloudSurvey>(
+        (snapshot) => !snapshot.exists
+            ? (state: CloudState.none, updatedAt: null)
+            : snapshot.metadata.hasPendingWrites
+            ? (state: CloudState.pending, updatedAt: null)
+            : (
+                state: CloudState.sent,
+                updatedAt: snapshot.data()?['updatedAt'] as String?,
+              ),
+      )
+      .transform(
+        StreamTransformer.fromHandlers(
+          handleError:
+              (
+                Object error,
+                StackTrace stackTrace,
+                EventSink<CloudSurvey> sink,
+              ) {
+                sink.add((state: CloudState.denied, updatedAt: null));
+              },
+        ),
+      );
+
+  @override
+  Stream<Map<String, dynamic>?> watchLastSent(String uid) => _surveys
+      .where('surveyedBy', isEqualTo: uid)
+      .orderBy('surveyedAt', descending: true)
+      .limit(1)
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs.isEmpty ? null : snapshot.docs.first.data(),
+      );
 }

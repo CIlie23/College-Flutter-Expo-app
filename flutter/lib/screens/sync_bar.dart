@@ -35,6 +35,7 @@ class _SyncBarState extends ConsumerState<SyncBar> {
     final small = Theme.of(context).textTheme.bodySmall;
     final cloud = ref.watch(myPinsProvider).value;
     final box = ref.watch(outboxProvider).value;
+    final last = ref.watch(lastSentProvider);
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: 8,
@@ -59,6 +60,17 @@ class _SyncBarState extends ConsumerState<SyncBar> {
             'last refusal: ${box!.lastError}',
             style: small?.copyWith(color: Theme.of(context).colorScheme.error),
           ),
+        Text(
+          'last sent: ${switch (last) {
+            AsyncError() => 'needs an index (see the log)',
+            AsyncData(value: final survey?) => '${survey['street']} ${survey['number']}, '
+                '${survey['entranceName']}, '
+                '${DateTime.parse(survey['surveyedAt'] as String).toLocal().toString().substring(11, 19)}',
+            AsyncData() => 'none',
+            _ => '…',
+          }}',
+          style: small,
+        ),
       ],
     );
   }
