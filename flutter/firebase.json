@@ -1,0 +1,11 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "location": "eur3"
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true
+    }
+  }
+}
