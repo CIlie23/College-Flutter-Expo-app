@@ -1,8 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'db/database.dart';
+import 'firebase_options.dart';
 import 'providers.dart';
 import 'session.dart';
 
@@ -13,9 +19,22 @@ import 'screens/map_screen.dart';
 import 'screens/route_screen.dart';
 import 'screens/survey_screen.dart';
 import 'store.dart';
+import 'sync.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Before anything that talks to Firebase: your project's options, per platform.
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (const bool.fromEnvironment('USE_EMULATORS')) {
+    const host = String.fromEnvironment(
+      'EMULATOR_HOST',
+      defaultValue: '10.0.2.2',
+    );
+    final h = kIsWeb ? 'localhost' : host;
+    await FirebaseAuth.instance.useAuthEmulator(h, 9099);
+    FirebaseFirestore.instance.useFirestoreEmulator(h, 8080);
+    await FirebaseStorage.instance.useStorageEmulator(h, 9199);
+  }
   final fixtures = await Fixtures.load();
   // The app's truth from now on: SQLite, seeded from the fixtures once.
   final db = AppDatabase();

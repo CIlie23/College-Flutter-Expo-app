@@ -77,3 +77,14 @@ class EntranceScreen extends ConsumerWidget {
     );
   }
 }
+
+String _cloudText(CloudSurvey? cloud) => switch (cloud?.state) {
+  null => 'asking…',
+  CloudState.none => 'not sent yet',
+  CloudState.denied => 'refused by the rules',
+  CloudState.pending => 'written on this phone, waiting for the server',
+  CloudState.sent =>
+    cloud?.updatedAt == null
+        ? 'sent'
+        : 'sent, ${DateTime.parse(cloud!.updatedAt!).toLocal().toString().substring(0, 19)}',
+};

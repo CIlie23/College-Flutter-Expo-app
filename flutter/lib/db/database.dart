@@ -106,28 +106,31 @@ class AppDatabase extends _$AppDatabase {
         },
       );
 
-  /// First launch only: copy the office's fixtures into the empty tables.
+  /// First launch only: copy the office's buildings into the empty table.
+  /// Entrances are populated by cloud pin sync for the signed-in worker.
   /// A contract object and a row share their field names, so JSON carries one
   /// into the other; the local-only columns are added on the way.
-  Future<void> seedIfEmpty(List<Building> fromOffice, List<Entrance> entrancesFromOffice) async {
-    final n = await entrances.count().getSingle();
+  Future<void> seedIfEmpty(List<Building> fromOffice) async {
+    final n = await buildings.count().getSingle();
     if (n > 0) return;
-    const synced = {'syncState': 'synced', 'lastError': null}; // the office has them
+    const synced = {
+      'syncState': 'synced',
+      'lastError': null,
+    }; // the office has them
     await batch((b) {
       b.insertAll(buildings, [
-        for (final x in fromOffice) BuildingRow.fromJson({...x.toJson(), ...synced}),
-      ]);
-      b.insertAll(entrances, [
-        for (final x in entrancesFromOffice) EntranceRow.fromJson({...x.toJson(), ...synced}),
+        for (final x in fromOffice)
+          BuildingRow.fromJson({...x.toJson(), ...synced}),
       ]);
     });
   }
 
   // ---- Reads: streams that emit again whenever a table they read changes ----
 
-  Stream<List<Entrance>> watchEntrances() => select(entrances)
-      .watch()
-      .map((rows) => [for (final r in rows) Entrance.fromJson(r.toJson())]);
+  Stream<List<Entrance>> watchEntrances() =>
+      select(entrances)
+          .watch()
+          .map((rows) => [for (final r in rows) Entrance.fromJson(r.toJson())]);
 
   Stream<Entrance?> watchEntrance(String id) =>
       (select(entrances)..where((e) => e.id.equals(id)))
@@ -156,30 +159,40 @@ class AppDatabase extends _$AppDatabase {
   /// A building the office missed: the worker stands at its door and makes
   /// both rows on the phone, with ids born here (UUID v4). The office learns of
   /// it at the first sync (week 4); until then it is 'pending', like any new row.
-  Future<String> addMissedEntrance(double lat, double lng, String buildingId, String entranceId) async {
+  Future<String> addMissedEntrance(
+    double lat,
+    double lng,
+    String buildingId,
+    String entranceId,
+  ) async {
     final now = DateTime.now().toUtc().toIso8601String();
     await transaction(() async {
-      await into(buildings).insert(BuildingsCompanion.insert(
-        id: buildingId,
-        createdAt: now,
-        updatedAt: now,
-        label: 'New building',
-        comment: const Value('Added in the field: not on the office map.'),
-      ));
-      await into(entrances).insert(EntrancesCompanion.insert(
-        id: entranceId,
-        createdAt: now,
-        updatedAt: now,
-        buildingId: buildingId,
-        lat: lat,
-        lng: lng,
-        street: '?', // the survey asks for the real address
-        number: '?',
-        entranceName: 'Sc. 1',
-        coordsConfirmed: true, // the pin is where the worker stands: at the door
-        addressConfirmed: false,
-        surveyStatus: SurveyStatus.in_progress,
-      ));
+      await into(buildings).insert(
+        BuildingsCompanion.insert(
+          id: buildingId,
+          createdAt: now,
+          updatedAt: now,
+          label: 'New building',
+          comment: const Value('Added in the field: not on the office map.'),
+        ),
+      );
+      await into(entrances).insert(
+        EntrancesCompanion.insert(
+          id: entranceId,
+          createdAt: now,
+          updatedAt: now,
+          buildingId: buildingId,
+          lat: lat,
+          lng: lng,
+          street: '?', // the survey asks for the real address
+          number: '?',
+          entranceName: 'Sc. 1',
+          coordsConfirmed:
+              true, // the pin is where the worker stands: at the door
+          addressConfirmed: false,
+          surveyStatus: SurveyStatus.in_progress,
+        ),
+      );
     });
     return entranceId;
   }
