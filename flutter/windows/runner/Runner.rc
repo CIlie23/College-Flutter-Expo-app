@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "ro.rau.college_app" "\0"
-            VALUE "FileDescription", "college_app" "\0"
+            VALUE "CompanyName", "ro.rau" "\0"
+            VALUE "FileDescription", "field_app" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "college_app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 ro.rau.college_app. All rights reserved." "\0"
-            VALUE "OriginalFilename", "college_app.exe" "\0"
-            VALUE "ProductName", "college_app" "\0"
+            VALUE "InternalName", "field_app" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 ro.rau. All rights reserved." "\0"
+            VALUE "OriginalFilename", "field_app.exe" "\0"
+            VALUE "ProductName", "field_app" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

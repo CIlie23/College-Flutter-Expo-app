@@ -29,6 +29,14 @@ class FixNotifier extends Notifier<Fix?> {
 
 final fixProvider = NotifierProvider<FixNotifier, Fix?>(FixNotifier.new);
 
+/// Exercise 3 — a derived provider: whoever watches it rebuilds when the
+/// quality changes, not on every new fix (Riverpod compares the values).
+final fixQualityProvider = Provider<String>((ref) {
+  final fix = ref.watch(fixProvider);
+  if (fix == null) return 'none';
+  return fix.accuracy <= 10 ? 'good' : 'rough';
+});
+
 /// The compass, only while some widget watches it: autoDispose stops the
 /// sensor when the last one goes away. No compass on the web.
 final headingProvider = StreamProvider.autoDispose<double?>((ref) {

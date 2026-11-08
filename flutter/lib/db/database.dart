@@ -53,6 +53,9 @@ class Entrances extends Table with RowColumns, LocalColumns {
   TextColumn get surveyStatus => textEnum<SurveyStatus>()();
   TextColumn get surveyedBy => text().nullable()();
   TextColumn get surveyedAt => text().nullable()();
+
+  /// Exercise 1 — local-only: when this phone last opened the entrance.
+  TextColumn get openedAt => text().nullable()();
 }
 
 @DataClassName('PhotoRow')
@@ -79,8 +82,7 @@ class Photos extends Table with RowColumns, LocalColumns {
 @DriftDatabase(tables: [Buildings, Entrances, Photos])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
-    : super(
-        executor ??
+      : super(executor ??
             // One file in the app's own sandbox (field.sqlite); on the web,
             // SQLite compiled to WebAssembly in a worker (the two files in web/).
             driftDatabase(
@@ -89,15 +91,20 @@ class AppDatabase extends _$AppDatabase {
                 sqlite3Wasm: Uri.parse('sqlite3.wasm'),
                 driftWorker: Uri.parse('drift_worker.js'),
               ),
-            ),
-      );
+            ));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2; // exercise 1: version 2 adds entrances.openedAt
 
   @override
   MigrationStrategy get migration =>
-      MigrationStrategy(onCreate: (m) => m.createAll());
+      MigrationStrategy(
+        onCreate: (m) => m.createAll(), // a new install gets every column at once
+        onUpgrade: (m, from, to) async {
+          // A phone that has version 1 gets the new column, keeping its rows.
+          if (from < 2) await m.addColumn(entrances, entrances.openedAt);
+        },
+      );
 
   /// First launch only: copy the office's buildings into the empty table.
   /// Entrances are populated by cloud pin sync for the signed-in worker.
@@ -118,32 +125,6 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
-  /// Replace the synced entrance pins with the cloud's current list while
-  /// preserving local survey changes that have not been sent yet.
-  Future<void> savePins(List<Entrance> pins) => transaction(() async {
-    for (final pin in pins) {
-      final row = EntranceRow.fromJson({
-        ...pin.toJson(),
-        'syncState': 'synced',
-        'lastError': null,
-      }).toCompanion(false);
-      await into(entrances).insert(
-        row,
-        onConflict: DoUpdate(
-          (_) => row,
-          where: (old) =>
-              old.syncState.equalsValue(SyncState.synced) &
-              old.updatedAt.isSmallerThanValue(pin.updatedAt),
-        ),
-      );
-    }
-    await (delete(entrances)..where(
-          (e) =>
-              e.syncState.equalsValue(SyncState.synced) &
-              e.id.isNotIn([for (final p in pins) p.id]),
-        ))
-        .go();
-  });
   // ---- Reads: streams that emit again whenever a table they read changes ----
 
   Stream<List<Entrance>> watchEntrances() =>
@@ -161,94 +142,19 @@ class AppDatabase extends _$AppDatabase {
           .watchSingleOrNull()
           .map((r) => r == null ? null : Building.fromJson(r.toJson()));
 
+  Stream<List<PhotoRow>> watchPhotos(String entranceId) =>
+      (select(photos)..where((p) => p.entranceId.equals(entranceId))).watch();
+
+  /// Exercise 1: the new column, read like any other.
+  Stream<String?> watchOpenedAt(String id) =>
+      (select(entrances)..where((e) => e.id.equals(id))).watchSingleOrNull().map((r) => r?.openedAt);
+
   // ---- Writes ----
 
-  /// The survey goes to SQLite: it survives a restart and waits for week 4's push.
-  Future<void> submitSurvey(Entrance surveyed, String me) {
-    final now = DateTime.now().toUtc().toIso8601String();
-    final row = surveyed.copyWith(
-      surveyStatus: SurveyStatus.submitted,
-      surveyedBy: me,
-      surveyedAt: now,
-      updatedAt: now,
-    );
-    return into(entrances).insertOnConflictUpdate(
-      EntranceRow.fromJson({
-        ...row.toJson(),
-        'syncState': 'pending', // the office has not seen this version yet
-        'lastError': null,
-      }),
-    );
-  }
-
-  /// The outbox: submitted surveys the cloud has not confirmed yet. A missed
-  /// building waits until its building has been synced to the cloud.
-  Future<List<Entrance>> outbox() async {
-    final q =
-        select(entrances).join([
-          innerJoin(buildings, buildings.id.equalsExp(entrances.buildingId)),
-        ])..where(
-          entrances.surveyStatus.equalsValue(SurveyStatus.submitted) &
-              entrances.syncState.isInValues([
-                SyncState.pending,
-                SyncState.failed,
-              ]) &
-              buildings.syncState.equalsValue(SyncState.synced),
-        );
-    return [
-      for (final r in await q.get())
-        Entrance.fromJson(r.readTable(entrances).toJson()),
-    ];
-  }
-
-  /// After a push: synced, unless the worker changed the survey meanwhile.
-  Future<void> markSent(String id, String updatedAt, String? error) =>
-      (update(
-        entrances,
-      )..where((e) => e.id.equals(id) & e.updatedAt.equals(updatedAt))).write(
-        EntrancesCompanion(
-          syncState: Value(error == null ? SyncState.synced : SyncState.failed),
-          lastError: Value(error),
-        ),
+  Future<void> markOpened(String id) =>
+      (update(entrances)..where((e) => e.id.equals(id))).write(
+        EntrancesCompanion(openedAt: Value(DateTime.now().toUtc().toIso8601String())),
       );
-
-  /// The photos not uploaded yet, and what became of each.
-  Future<List<PhotoRow>> photosToUpload() =>
-      (select(photos)..where(
-            (p) => p.uploadState.isInValues([
-              UploadState.pending,
-              UploadState.failed,
-            ]),
-          ))
-          .get();
-
-  Future<void> markPhoto(String id, {String? remoteUrl, String? error}) =>
-      (update(photos)..where((p) => p.id.equals(id))).write(
-        PhotosCompanion(
-          uploadState: Value(
-            error == null ? UploadState.uploaded : UploadState.failed,
-          ),
-          remoteUrl: Value(remoteUrl),
-          lastError: Value(error),
-        ),
-      );
-
-  /// The banner's count: what still waits to be sent, and the last refusal.
-  Stream<({int pending, int failed, String? lastError})> watchOutbox() =>
-      (select(entrances)..where(
-            (e) =>
-                e.syncState.isInValues([SyncState.pending, SyncState.failed]),
-          ))
-          .watch()
-          .map(
-            (rows) => (
-              pending: rows
-                  .where((r) => r.syncState == SyncState.pending)
-                  .length,
-              failed: rows.where((r) => r.syncState == SyncState.failed).length,
-              lastError: rows.map((r) => r.lastError).nonNulls.firstOrNull,
-            ),
-          );
 
   /// A building the office missed: the worker stands at its door and makes
   /// both rows on the phone, with ids born here (UUID v4). The office learns of
@@ -289,5 +195,21 @@ class AppDatabase extends _$AppDatabase {
       );
     });
     return entranceId;
+  }
+
+  /// The survey goes to SQLite: it survives a restart and waits for week 4's push.
+  Future<void> submitSurvey(Entrance surveyed, String me) {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final row = surveyed.copyWith(
+      surveyStatus: SurveyStatus.submitted,
+      surveyedBy: me,
+      surveyedAt: now,
+      updatedAt: now,
+    );
+    return into(entrances).insertOnConflictUpdate(EntranceRow.fromJson({
+      ...row.toJson(),
+      'syncState': 'pending', // the office has not seen this version yet
+      'lastError': null,
+    }));
   }
 }

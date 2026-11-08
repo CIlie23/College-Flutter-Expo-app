@@ -2,6 +2,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 const _secure = FlutterSecureStorage();
 final _prefs = SharedPreferencesAsync();
@@ -13,7 +14,7 @@ final _prefs = SharedPreferencesAsync();
 final tokenProvider = FutureProvider<String>((ref) async {
   final saved = await _secure.read(key: 'field.token');
   if (saved != null) return saved;
-  final token = 'placeholder-${DateTime.now().microsecondsSinceEpoch}';
+  final token = 'placeholder-${const Uuid().v4()}';
   await _secure.write(key: 'field.token', value: token);
   return token;
 });
